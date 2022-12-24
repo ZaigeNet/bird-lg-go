@@ -39,13 +39,19 @@ func batchRequest(servers []string, endpoint string, command string) []string {
 			// Compose URL and send the request
 			hostname := server
 			hostname = url.PathEscape(hostname)
+			// if strings.Contains(hostname, ":") {
+			// 	hostname = "[" + hostname + "]"
+			// }
+			port := strconv.Itoa(setting.proxyPort)
 			if strings.Contains(hostname, ":") {
-				hostname = "[" + hostname + "]"
+				splits := strings.Split(hostname, ":")
+				hostname = splits[0]
+				port = splits[1]
 			}
 			if setting.domain != "" {
 				hostname += "." + setting.domain
 			}
-			url := "http://" + hostname + ":" + strconv.Itoa(setting.proxyPort) + "/" + url.PathEscape(endpoint) + "?q=" + url.QueryEscape(command)
+			url := "http://" + hostname + ":" + port + "/" + url.PathEscape(endpoint) + "?q=" + url.QueryEscape(command)
 			go func(url string, i int) {
 				client := http.Client{Timeout: time.Duration(setting.timeOut) * time.Second}
 				response, err := client.Get(url)
