@@ -1,0 +1,13 @@
+[Unit]
+Description=Bird-lg-proxy
+Documentation=https://github.com/xddxdd/bird-lg-go
+After=network.target
+
+[Service]
+EnvironmentFile=/usr/local/bird-lg/config.conf
+ExecStart=/usr/local/bird-lg/proxy
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
