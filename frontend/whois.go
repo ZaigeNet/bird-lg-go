@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/google/shlex"
 )
 
 // Send a whois request
@@ -15,18 +17,31 @@ func whois(s string) string {
 	}
 
 	if strings.HasPrefix(setting.whoisServer, "/") {
-		cmd := exec.Command(setting.whoisServer, s)
-		output, err := cmd.CombinedOutput()
+		args, err := shlex.Split(setting.whoisServer)
 		if err != nil {
 			return err.Error()
 		}
+		args = append(args, s)
+
+		cmd := exec.Command(args[0], args[1:]...)
+		output, err := cmd.CombinedOutput()
 		if len(output) > 65535 {
 			output = output[:65535]
 		}
-		return string(output)
+		if err != nil {
+			return err.Error() + "\n" + string(output)
+		} else {
+			return string(output)
+		}
 	} else {
 		buf := make([]byte, 65536)
-		conn, err := net.DialTimeout("tcp", setting.whoisServer+":43", 5*time.Second)
+
+		whoisServer := setting.whoisServer
+		if !strings.Contains(whoisServer, ":") {
+			whoisServer = whoisServer + ":43"
+		}
+
+		conn, err := net.DialTimeout("tcp", whoisServer, 5*time.Second)
 		if err != nil {
 			return err.Error()
 		}
@@ -35,8 +50,8 @@ func whois(s string) string {
 		conn.Write([]byte(s + "\r\n"))
 
 		n, err := io.ReadFull(conn, buf)
-		if err != nil && err != io.ErrUnexpectedEOF {
-			return err.Error()
+		if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
+			return err.Error() + "\n" + string(buf[:n])
 		}
 		return string(buf[:n])
 	}
